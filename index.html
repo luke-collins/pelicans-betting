@@ -318,6 +318,7 @@
                 const processedBet = {
                     date: bet.date,
                     number: bet.number,
+                    matchup: bet.matchup || '',
                     expectedStake: parseFloat(String(bet.expectedStake).replace(/[$,]/g, '')) || 0,
                     expectedWinnings: parseFloat(String(bet.expectedWinnings).replace(/[$,]/g, '')) || 0,
                     odds: bet.odds,
@@ -373,7 +374,7 @@
                     <div class="bet-header">
                         <div>
                             <div class="bet-number">Bet #${bet.number}</div>
-                            <div class="bet-date">${bet.date}</div>
+                            <div class="bet-date">${bet.matchup}</div>
                         </div>
                         <span class="bet-result ${bet.result.toString().toLowerCase()}">${bet.result}</span>
                     </div>
@@ -409,7 +410,7 @@
                     <div class="bet-header">
                         <div>
                             <div class="bet-number">Bet #${bet.number}</div>
-                            <div class="bet-date">${bet.date}</div>
+                            <div class="bet-date">${bet.matchup}</div>
                         </div>
                         <span class="bet-result upcoming">Upcoming</span>
                     </div>
