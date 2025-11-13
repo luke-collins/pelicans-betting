@@ -45,6 +45,47 @@
             padding: 20px;
         }
 
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #1a3556;
+            border-radius: 12px;
+            border: 2px solid #85714d;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #85714d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-select {
+            background: #0c2340;
+            color: #FFFFFF;
+            border: 2px solid #85714d;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:hover {
+            border-color: #FFFFFF;
+        }
+
+        .filter-select:focus {
+            border-color: #c8102e;
+            box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.2);
+        }
+
         .loading {
             text-align: center;
             padding: 40px;
@@ -280,6 +321,18 @@
             Loading betting data...
         </div>
         <div id="content" style="display: none;">
+            <div class="filter-container">
+                <span class="filter-label">View</span>
+                <select id="filter-select" class="filter-select" onchange="applyFilter()">
+                    <option value="all">All Bets</option>
+                    <option value="wins">Wins Only</option>
+                    <option value="losses">Losses Only</option>
+                    <option value="avg-winnings">Average Winnings</option>
+                    <option value="avg-losses">Average Losses</option>
+                    <option value="avg-odds">Average Odds</option>
+                </select>
+            </div>
+
             <div class="stats-grid" id="stats"></div>
             
             <div class="section">
@@ -292,7 +345,7 @@
                 <div id="today-bet"></div>
             </div>
 
-            <div class="section">
+            <div class="section" id="upcoming-section">
                 <div class="section-title">Upcoming Bets</div>
                 <div id="upcoming-bets"></div>
             </div>
@@ -304,6 +357,20 @@
     <script>
         // Google Apps Script Web App URL
         const API_URL = 'https://script.google.com/macros/s/AKfycbxjZPSJPCd8O3IE380SXUK9aAHWH16aqxpCGyVqrLjgTDcQN7cGXp6Dre94JCP4SNkmtQ/exec';
+
+        // Global variables to store bet data
+        let allBetsData = {
+            recentBets: [],
+            upcomingBets: [],
+            todayBet: null,
+            stats: {
+                totalWins: 0,
+                totalLosses: 0,
+                totalWinnings: 0,
+                winRate: 0,
+                completedBets: 0
+            }
+        };
 
         async function loadData() {
             try {
@@ -389,31 +456,206 @@
 
             const winRate = completedBets > 0 ? (totalWins / completedBets * 100).toFixed(1) : 0;
 
-            // Update stats
-            const statsHTML = `
-                <div class="stat-card">
-                    <div class="stat-label">Total Winnings</div>
-                    <div class="stat-value ${totalWinnings >= 0 ? 'positive' : 'negative'}">
-                        $${totalWinnings.toFixed(2)}
+            // Store data globally for filtering
+            allBetsData = {
+                recentBets: recentBets,
+                upcomingBets: upcomingBets,
+                todayBet: todayBet,
+                stats: {
+                    totalWins: totalWins,
+                    totalLosses: totalLosses,
+                    totalWinnings: totalWinnings,
+                    winRate: winRate,
+                    completedBets: completedBets
+                }
+            };
+
+            // Display with current filter
+            displayFilteredData();
+            // Display with current filter
+            displayFilteredData();
+        }
+
+        function displayFilteredData() {
+            const filter = document.getElementById('filter-select').value;
+            const { recentBets, upcomingBets, todayBet, stats } = allBetsData;
+
+            let displayStats = { ...stats };
+            let displayRecent = [...recentBets];
+
+            // Apply filter
+            if (filter === 'wins') {
+                displayRecent = recentBets.filter(bet => bet.result.toString().toLowerCase() === 'win');
+                displayStats = {
+                    totalWins: stats.totalWins,
+                    totalLosses: 0,
+                    totalWinnings: stats.totalWinnings,
+                    winRate: 100,
+                    completedBets: stats.totalWins
+                };
+            } else if (filter === 'losses') {
+                displayRecent = recentBets.filter(bet => bet.result.toString().toLowerCase() === 'loss');
+                const totalLosings = displayRecent.reduce((sum, bet) => sum + bet.actualLosings, 0);
+                displayStats = {
+                    totalWins: 0,
+                    totalLosses: stats.totalLosses,
+                    totalWinnings: 0,
+                    winRate: 0,
+                    completedBets: stats.totalLosses,
+                    totalLosings: totalLosings
+                };
+            } else if (filter === 'avg-winnings') {
+                const winningBets = recentBets.filter(bet => bet.result.toString().toLowerCase() === 'win');
+                const avgWinnings = winningBets.length > 0 ? winningBets.reduce((sum, bet) => sum + bet.actualWinnings, 0) / winningBets.length : 0;
+                displayRecent = [];
+                displayStats = {
+                    totalWins: stats.totalWins,
+                    totalLosses: 0,
+                    totalWinnings: avgWinnings,
+                    winRate: stats.winRate,
+                    completedBets: stats.totalWins,
+                    isAverage: true
+                };
+            } else if (filter === 'avg-losses') {
+                const losingBets = recentBets.filter(bet => bet.result.toString().toLowerCase() === 'loss');
+                const avgLosings = losingBets.length > 0 ? losingBets.reduce((sum, bet) => sum + bet.actualLosings, 0) / losingBets.length : 0;
+                displayRecent = [];
+                displayStats = {
+                    totalWins: 0,
+                    totalLosses: stats.totalLosses,
+                    totalWinnings: 0,
+                    winRate: stats.winRate,
+                    completedBets: stats.totalLosses,
+                    totalLosings: avgLosings,
+                    isAverage: true
+                };
+            } else if (filter === 'avg-odds') {
+                const betsWithOdds = recentBets.filter(bet => bet.odds && bet.odds !== '');
+                const avgOdds = betsWithOdds.length > 0 ? betsWithOdds.reduce((sum, bet) => sum + parseFloat(bet.odds), 0) / betsWithOdds.length : 0;
+                displayRecent = [];
+                displayStats = {
+                    totalWins: stats.totalWins,
+                    totalLosses: stats.totalLosses,
+                    totalWinnings: 0,
+                    winRate: stats.winRate,
+                    completedBets: stats.completedBets,
+                    avgOdds: avgOdds.toFixed(0),
+                    isAverage: true
+                };
+            }
+
+            // Update stats display
+            let statsHTML = '';
+            if (filter === 'losses') {
+                statsHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Lost</div>
+                        <div class="stat-value negative">
+                            $${displayStats.totalLosings.toFixed(2)}
+                        </div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Win Rate</div>
-                    <div class="stat-value">${winRate}%</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Wins</div>
-                    <div class="stat-value positive">${totalWins}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Losses</div>
-                    <div class="stat-value negative">${totalLosses}</div>
-                </div>
-            `;
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${displayStats.winRate}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value positive">${displayStats.totalWins}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value negative">${displayStats.totalLosses}</div>
+                    </div>
+                `;
+            } else if (filter === 'avg-winnings') {
+                statsHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Winnings</div>
+                        <div class="stat-value positive">
+                            $${displayStats.totalWinnings.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${displayStats.winRate}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value positive">${displayStats.totalWins}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value negative">${stats.totalLosses}</div>
+                    </div>
+                `;
+            } else if (filter === 'avg-losses') {
+                statsHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Loss</div>
+                        <div class="stat-value negative">
+                            $${displayStats.totalLosings.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${displayStats.winRate}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value positive">${stats.totalWins}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value negative">${displayStats.totalLosses}</div>
+                    </div>
+                `;
+            } else if (filter === 'avg-odds') {
+                statsHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Odds</div>
+                        <div class="stat-value">
+                            ${displayStats.avgOdds}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${displayStats.winRate}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value positive">${displayStats.totalWins}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value negative">${displayStats.totalLosses}</div>
+                    </div>
+                `;
+            } else {
+                statsHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Winnings</div>
+                        <div class="stat-value ${displayStats.totalWinnings >= 0 ? 'positive' : 'negative'}">
+                            $${displayStats.totalWinnings.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${displayStats.winRate}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value positive">${displayStats.totalWins}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value negative">${displayStats.totalLosses}</div>
+                    </div>
+                `;
+            }
             document.getElementById('stats').innerHTML = statsHTML;
 
-            // Update recent bets (show last 10)
-            const recentBetsHTML = recentBets.slice(-10).reverse().map(bet => `
+            // Update recent bets display (show last 10 or filtered)
+            const recentBetsHTML = displayRecent.slice(-10).reverse().map(bet => `
                 <div class="bet-card ${bet.result.toString().toLowerCase()}">
                     <div class="bet-header">
                         <div>
@@ -446,10 +688,10 @@
                     </div>
                 </div>
             `).join('');
-            document.getElementById('recent-bets').innerHTML = recentBetsHTML || '<p style="text-align:center; color:#85714d;">No completed bets yet</p>';
+            document.getElementById('recent-bets').innerHTML = recentBetsHTML || '<p style="text-align:center; color:#85714d;">No bets to display</p>';
 
-            // Display today's game if it exists
-            if (todayBet) {
+            // Display today's game if it exists and not in average view
+            if (todayBet && !displayStats.isAverage) {
                 document.getElementById('today-section').style.display = 'block';
                 const todayHTML = `
                     <div class="bet-card today">
@@ -483,35 +725,44 @@
                 document.getElementById('today-section').style.display = 'none';
             }
 
-            // Update upcoming bets (show next 5, excluding today's game)
-            const upcomingBetsHTML = upcomingBets.slice(0, 5).map(bet => `
-                <div class="bet-card upcoming">
-                    <div class="bet-header">
-                        <div>
-                            <div class="bet-number">Bet #${bet.number}</div>
-                            <div class="bet-date">${bet.matchup || bet.date}</div>
+            // Update upcoming bets (show next 5, excluding today's game) - hide in average views
+            if (!displayStats.isAverage) {
+                document.getElementById('upcoming-section').style.display = 'block';
+                const upcomingBetsHTML = upcomingBets.slice(0, 5).map(bet => `
+                    <div class="bet-card upcoming">
+                        <div class="bet-header">
+                            <div>
+                                <div class="bet-number">Bet #${bet.number}</div>
+                                <div class="bet-date">${bet.matchup || bet.date}</div>
+                            </div>
+                            <span class="bet-result upcoming">Upcoming</span>
                         </div>
-                        <span class="bet-result upcoming">Upcoming</span>
+                        <div class="bet-details">
+                            <div class="bet-detail">
+                                <span class="detail-label">Expected Stake</span>
+                                <span class="detail-value">$${bet.expectedStake.toFixed(2)}</span>
+                            </div>
+                            <div class="bet-detail">
+                                <span class="detail-label">Expected Win</span>
+                                <span class="detail-value">$${bet.expectedWinnings.toFixed(2)}</span>
+                            </div>
+                            ${bet.odds ? `
+                            <div class="bet-detail">
+                                <span class="detail-label">Odds</span>
+                                <span class="detail-value">${bet.odds}</span>
+                            </div>
+                            ` : ''}
+                        </div>
                     </div>
-                    <div class="bet-details">
-                        <div class="bet-detail">
-                            <span class="detail-label">Expected Stake</span>
-                            <span class="detail-value">$${bet.expectedStake.toFixed(2)}</span>
-                        </div>
-                        <div class="bet-detail">
-                            <span class="detail-label">Expected Win</span>
-                            <span class="detail-value">$${bet.expectedWinnings.toFixed(2)}</span>
-                        </div>
-                        ${bet.odds ? `
-                        <div class="bet-detail">
-                            <span class="detail-label">Odds</span>
-                            <span class="detail-value">${bet.odds}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('upcoming-bets').innerHTML = upcomingBetsHTML || '<p style="text-align:center; color:#85714d;">No upcoming bets scheduled</p>';
+                `).join('');
+                document.getElementById('upcoming-bets').innerHTML = upcomingBetsHTML || '<p style="text-align:center; color:#85714d;">No upcoming bets scheduled</p>';
+            } else {
+                document.getElementById('upcoming-section').style.display = 'none';
+            }
+        }
+
+        function applyFilter() {
+            displayFilteredData();
         }
 
         // Load data on page load
