@@ -340,9 +340,11 @@
             const upcomingBets = [];
             let todayBet = null;
 
-            // Get today's date in the same format as the spreadsheet dates
+            // Get today's date (local time)
             const today = new Date();
-            const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+            const todayYear = today.getFullYear();
+            const todayMonth = today.getMonth(); // 0-11
+            const todayDate = today.getDate();
 
             data.forEach(bet => {
                 if (!bet.date) return;
@@ -360,9 +362,11 @@
                     actualLosings: parseFloat(String(bet.actualLosings).replace(/[$,]/g, '')) || 0
                 };
 
-                // Check if this bet is for today
-                const betDate = new Date(processedBet.date).toISOString().split('T')[0];
-                const isToday = betDate === todayStr;
+                // Check if this bet is for today (compare year, month, day only)
+                const betDate = new Date(processedBet.date);
+                const isToday = betDate.getFullYear() === todayYear && 
+                               betDate.getMonth() === todayMonth && 
+                               betDate.getDate() === todayDate;
 
                 if (processedBet.result && processedBet.result.toString().toLowerCase() === 'win') {
                     totalWins++;
