@@ -129,6 +129,13 @@
             opacity: 0.8;
         }
 
+        .bet-card.today {
+            border-left-color: #c8102e;
+            background: linear-gradient(135deg, #1a3556 0%, #3a1e2e 100%);
+            box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
+            border: 2px solid #c8102e;
+        }
+
         .bet-header {
             display: flex;
             justify-content: space-between;
@@ -170,6 +177,21 @@
         .bet-result.upcoming {
             background: #85714d;
             color: #FFFFFF;
+        }
+
+        .bet-result.today {
+            background: #c8102e;
+            color: #FFFFFF;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(200, 16, 46, 0);
+            }
         }
 
         .bet-details {
@@ -265,6 +287,11 @@
                 <div id="recent-bets"></div>
             </div>
 
+            <div class="section" id="today-section" style="display: none;">
+                <div class="section-title">Today's Game</div>
+                <div id="today-bet"></div>
+            </div>
+
             <div class="section">
                 <div class="section-title">Upcoming Bets</div>
                 <div id="upcoming-bets"></div>
@@ -311,6 +338,11 @@
             
             const recentBets = [];
             const upcomingBets = [];
+            let todayBet = null;
+
+            // Get today's date in the same format as the spreadsheet dates
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
 
             data.forEach(bet => {
                 if (!bet.date) return;
@@ -328,6 +360,10 @@
                     actualLosings: parseFloat(String(bet.actualLosings).replace(/[$,]/g, '')) || 0
                 };
 
+                // Check if this bet is for today
+                const betDate = new Date(processedBet.date).toISOString().split('T')[0];
+                const isToday = betDate === todayStr;
+
                 if (processedBet.result && processedBet.result.toString().toLowerCase() === 'win') {
                     totalWins++;
                     totalProfit += processedBet.actualWinnings - processedBet.actualStake;
@@ -339,7 +375,12 @@
                     completedBets++;
                     recentBets.push(processedBet);
                 } else if (processedBet.number) {
-                    upcomingBets.push(processedBet);
+                    // This is an upcoming bet
+                    if (isToday && !todayBet) {
+                        todayBet = processedBet;
+                    } else {
+                        upcomingBets.push(processedBet);
+                    }
                 }
             });
 
@@ -374,7 +415,7 @@
                     <div class="bet-header">
                         <div>
                             <div class="bet-number">Bet #${bet.number}</div>
-                            <div class="bet-date">${bet.matchup}</div>
+                            <div class="bet-date">${bet.matchup || bet.date}</div>
                         </div>
                         <span class="bet-result ${bet.result.toString().toLowerCase()}">${bet.result}</span>
                     </div>
@@ -404,13 +445,48 @@
             `).join('');
             document.getElementById('recent-bets').innerHTML = recentBetsHTML || '<p style="text-align:center; color:#85714d;">No completed bets yet</p>';
 
-            // Update upcoming bets (show next 5)
+            // Display today's game if it exists
+            if (todayBet) {
+                document.getElementById('today-section').style.display = 'block';
+                const todayHTML = `
+                    <div class="bet-card today">
+                        <div class="bet-header">
+                            <div>
+                                <div class="bet-number">Bet #${todayBet.number}</div>
+                                <div class="bet-date">${todayBet.matchup}</div>
+                            </div>
+                            <span class="bet-result today">Today</span>
+                        </div>
+                        <div class="bet-details">
+                            <div class="bet-detail">
+                                <span class="detail-label">Expected Stake</span>
+                                <span class="detail-value">$${todayBet.expectedStake.toFixed(2)}</span>
+                            </div>
+                            <div class="bet-detail">
+                                <span class="detail-label">Expected Win</span>
+                                <span class="detail-value">$${todayBet.expectedWinnings.toFixed(2)}</span>
+                            </div>
+                            ${todayBet.odds ? `
+                            <div class="bet-detail">
+                                <span class="detail-label">Odds</span>
+                                <span class="detail-value">${todayBet.odds}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('today-bet').innerHTML = todayHTML;
+            } else {
+                document.getElementById('today-section').style.display = 'none';
+            }
+
+            // Update upcoming bets (show next 5, excluding today's game)
             const upcomingBetsHTML = upcomingBets.slice(0, 5).map(bet => `
                 <div class="bet-card upcoming">
                     <div class="bet-header">
                         <div>
                             <div class="bet-number">Bet #${bet.number}</div>
-                            <div class="bet-date">${bet.matchup}</div>
+                            <div class="bet-date">${bet.matchup || bet.date}</div>
                         </div>
                         <span class="bet-result upcoming">Upcoming</span>
                     </div>
