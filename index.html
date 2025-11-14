@@ -325,32 +325,6 @@
             color: #FFFFFF;
         }
 
-        .refresh-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #c8102e;
-            color: #FFFFFF;
-            border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(200, 16, 46, 0.4);
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .refresh-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(200, 16, 46, 0.6);
-        }
-
-        .refresh-btn:active {
-            transform: scale(0.95);
-        }
-
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 20px;
@@ -422,8 +396,6 @@
         </div>
     </div>
 
-    <button class="refresh-btn" onclick="loadData()" title="Refresh Data">↻</button>
-
     <script>
         // Google Apps Script Web App URL
         const API_URL = 'https://script.google.com/macros/s/AKfycbxjZPSJPCd8O3IE380SXUK9aAHWH16aqxpCGyVqrLjgTDcQN7cGXp6Dre94JCP4SNkmtQ/exec';
@@ -476,7 +448,7 @@
         function processDataFromJSON(data) {
             let totalWins = 0;
             let totalLosses = 0;
-            let totalWinnings = 0;  // Changed from totalProfit
+            let totalWinnings = 0;
             let completedBets = 0;
             
             const recentBets = [];
@@ -486,7 +458,7 @@
             // Get today's date (local time)
             const today = new Date();
             const todayYear = today.getFullYear();
-            const todayMonth = today.getMonth(); // 0-11
+            const todayMonth = today.getMonth();
             const todayDate = today.getDate();
 
             data.forEach(bet => {
@@ -505,7 +477,7 @@
                     actualLosings: parseFloat(String(bet.actualLosings).replace(/[$,]/g, '')) || 0
                 };
 
-                // Check if this bet is for today (compare year, month, day only)
+                // Check if this bet is for today
                 const betDate = new Date(processedBet.date);
                 const isToday = betDate.getFullYear() === todayYear && 
                                betDate.getMonth() === todayMonth && 
@@ -513,7 +485,7 @@
 
                 if (processedBet.result && processedBet.result.toString().toLowerCase() === 'win') {
                     totalWins++;
-                    totalWinnings += processedBet.actualWinnings;  // Total winnings including stake
+                    totalWinnings += processedBet.actualWinnings;
                     completedBets++;
                     recentBets.push(processedBet);
                 } else if (processedBet.result && processedBet.result.toString().toLowerCase() === 'loss') {
@@ -521,7 +493,6 @@
                     completedBets++;
                     recentBets.push(processedBet);
                 } else if (processedBet.number) {
-                    // This is an upcoming bet
                     if (isToday && !todayBet) {
                         todayBet = processedBet;
                     } else {
@@ -548,8 +519,6 @@
 
             // Display with current filter
             displayFilteredData();
-            // Display with current filter
-            displayFilteredData();
         }
 
         function displayFilteredData() {
@@ -558,14 +527,16 @@
 
             let displayStats = { ...stats };
             let displayRecent = [...recentBets];
-            let showAllRecent = false; // Flag for wins/losses filters
+            let showAllRecent = false;
 
-            // Reset expansion state when filter changes
+            // Reset expansion state when filter changes to "all"
             if (filter === 'all') {
-                recentExpanded = false;
-                recentShowCount = 1;
-                upcomingExpanded = false;
-                upcomingShowCount = 1;
+                if (recentExpanded === false) {
+                    recentShowCount = 1;
+                }
+                if (upcomingExpanded === false) {
+                    upcomingShowCount = 1;
+                }
             }
 
             // Apply filter
@@ -744,7 +715,6 @@
             // Update recent bets display with expansion logic
             let recentBetsToShow = displayRecent;
             if (!showAllRecent && displayRecent.length > 0) {
-                // Show limited rows based on expansion state
                 recentBetsToShow = displayRecent.slice(-recentShowCount);
             }
 
@@ -785,11 +755,9 @@
 
             // Show/hide expand controls for recent bets
             if (showAllRecent || displayRecent.length <= 1) {
-                // Hide all expansion controls for wins/losses filters or if 1 or fewer bets
                 document.getElementById('recent-expand-arrow').style.display = 'none';
                 document.getElementById('recent-show-more').style.display = 'none';
             } else {
-                // Show appropriate expansion control
                 if (!recentExpanded && displayRecent.length > 1) {
                     document.getElementById('recent-expand-arrow').style.display = 'block';
                     document.getElementById('recent-show-more').style.display = 'none';
@@ -838,7 +806,7 @@
                 document.getElementById('today-section').style.display = 'none';
             }
 
-            // Update upcoming bets with expansion logic - hide in average views
+            // Update upcoming bets with expansion logic
             if (!displayStats.isAverage) {
                 document.getElementById('upcoming-section').style.display = 'block';
                 
@@ -897,7 +865,7 @@
 
         function expandRecent() {
             recentExpanded = true;
-            recentShowCount = 4; // Show 1 + 3 more = 4 total
+            recentShowCount = 4;
             displayFilteredData();
         }
 
@@ -908,7 +876,7 @@
 
         function expandUpcoming() {
             upcomingExpanded = true;
-            upcomingShowCount = 4; // Show 1 + 3 more = 4 total
+            upcomingShowCount = 4;
             displayFilteredData();
         }
 
@@ -918,6 +886,11 @@
         }
 
         function applyFilter() {
+            // Reset expansion state when changing filters
+            recentExpanded = false;
+            recentShowCount = 1;
+            upcomingExpanded = false;
+            upcomingShowCount = 1;
             displayFilteredData();
         }
 
