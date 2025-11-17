@@ -445,10 +445,13 @@
             }
         }
 
-        function processDataFromJSON(data) {
+        function processDataFromJSON(jsonData) {
+            // Extract bets array and total winnings from response
+            const data = jsonData.bets || jsonData; // Support both old and new format
+            const totalWinningsFromSheet = jsonData.totalWinnings || 0;
+            
             let totalWins = 0;
             let totalLosses = 0;
-            let totalWinnings = 0;
             let completedBets = 0;
             
             const recentBets = [];
@@ -485,7 +488,6 @@
 
                 if (processedBet.result && processedBet.result.toString().toLowerCase() === 'win') {
                     totalWins++;
-                    totalWinnings += processedBet.actualWinnings;
                     completedBets++;
                     recentBets.push(processedBet);
                 } else if (processedBet.result && processedBet.result.toString().toLowerCase() === 'loss') {
@@ -511,7 +513,7 @@
                 stats: {
                     totalWins: totalWins,
                     totalLosses: totalLosses,
-                    totalWinnings: totalWinnings,
+                    totalWinnings: totalWinningsFromSheet, // Use value from K2
                     winRate: winRate,
                     completedBets: completedBets
                 }
