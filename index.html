@@ -385,6 +385,7 @@
                 <div id="recent-bets"></div>
                 <div id="recent-expand-arrow" class="expand-arrow" onclick="expandRecent()">▼</div>
                 <div id="recent-show-more" class="show-more-btn" onclick="showMoreRecent()" style="display: none;">SHOW MORE</div>
+                <div id="recent-collapse" class="show-more-btn" onclick="collapseRecent()" style="display: none;">CLOSE</div>
             </div>
 
             <div class="section" id="upcoming-section">
@@ -392,6 +393,7 @@
                 <div id="upcoming-bets"></div>
                 <div id="upcoming-expand-arrow" class="expand-arrow" onclick="expandUpcoming()">▼</div>
                 <div id="upcoming-show-more" class="show-more-btn" onclick="showMoreUpcoming()" style="display: none;">SHOW MORE</div>
+                <div id="upcoming-collapse" class="show-more-btn" onclick="collapseUpcoming()" style="display: none;">CLOSE</div>
             </div>
         </div>
     </div>
@@ -759,16 +761,24 @@
             if (showAllRecent || displayRecent.length <= 1) {
                 document.getElementById('recent-expand-arrow').style.display = 'none';
                 document.getElementById('recent-show-more').style.display = 'none';
+                document.getElementById('recent-collapse').style.display = 'none';
             } else {
                 if (!recentExpanded && displayRecent.length > 1) {
+                    // Initial state - show expand arrow only
                     document.getElementById('recent-expand-arrow').style.display = 'block';
                     document.getElementById('recent-show-more').style.display = 'none';
+                    document.getElementById('recent-collapse').style.display = 'none';
                 } else {
+                    // Expanded state - hide arrow, show appropriate button
                     document.getElementById('recent-expand-arrow').style.display = 'none';
                     if (recentShowCount < displayRecent.length) {
+                        // Still more to show
                         document.getElementById('recent-show-more').style.display = 'block';
+                        document.getElementById('recent-collapse').style.display = 'block';
                     } else {
+                        // Showing all - just show collapse
                         document.getElementById('recent-show-more').style.display = 'none';
+                        document.getElementById('recent-collapse').style.display = 'block';
                     }
                 }
             }
@@ -847,16 +857,24 @@
                 if (upcomingBets.length <= 1) {
                     document.getElementById('upcoming-expand-arrow').style.display = 'none';
                     document.getElementById('upcoming-show-more').style.display = 'none';
+                    document.getElementById('upcoming-collapse').style.display = 'none';
                 } else {
                     if (!upcomingExpanded && upcomingBets.length > 1) {
+                        // Initial state - show expand arrow only
                         document.getElementById('upcoming-expand-arrow').style.display = 'block';
                         document.getElementById('upcoming-show-more').style.display = 'none';
+                        document.getElementById('upcoming-collapse').style.display = 'none';
                     } else {
+                        // Expanded state - hide arrow, show appropriate button
                         document.getElementById('upcoming-expand-arrow').style.display = 'none';
                         if (upcomingShowCount < upcomingBets.length) {
+                            // Still more to show
                             document.getElementById('upcoming-show-more').style.display = 'block';
+                            document.getElementById('upcoming-collapse').style.display = 'block';
                         } else {
+                            // Showing all - just show collapse
                             document.getElementById('upcoming-show-more').style.display = 'none';
+                            document.getElementById('upcoming-collapse').style.display = 'block';
                         }
                     }
                 }
@@ -876,6 +894,12 @@
             displayFilteredData();
         }
 
+        function collapseRecent() {
+            recentExpanded = false;
+            recentShowCount = 1;
+            displayFilteredData();
+        }
+
         function expandUpcoming() {
             upcomingExpanded = true;
             upcomingShowCount = 4;
@@ -884,6 +908,12 @@
 
         function showMoreUpcoming() {
             upcomingShowCount += 5;
+            displayFilteredData();
+        }
+
+        function collapseUpcoming() {
+            upcomingExpanded = false;
+            upcomingShowCount = 1;
             displayFilteredData();
         }
 
